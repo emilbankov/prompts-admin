@@ -4,24 +4,31 @@ import styles from './EditPlan.module.css';
 import type { Plan } from '../../services/plansService';
 
 const AI_MODELS = [
-    'O3',
-    'O3 Mini',
-    'O4 Mini',
-    'GPT-4.1',
-    'GPT-4.1 Mini',
-    'GPT-4.1 Nano'
+    'gpt-4.1',
+    'gpt-4.1-mini',
+    'gpt-4.1-nano',
+    'o3',
+    'o3-mini',
+    'o4-mini'
+];
+
+const REASONING_EFFORT_OPTIONS = [
+    'low',
+    'medium',
+    'high'
 ];
 
 const EditPlan: React.FC = () => {
     const navigate = useNavigate();
     const [formData, setFormData] = useState<Plan>({
         id: undefined as unknown as number,
-        name: '',
+        planName: '',
         systemPrompt: '',
         systemVariables: '',
         userPrompt: '',
         userVariables: '',
-        model: 'O3'
+        model: 'gpt-4.1',
+        reasoningEffort: 'medium'
     });
     const [copiedVar, setCopiedVar] = useState<string | null>(null);
 
@@ -29,7 +36,9 @@ const EditPlan: React.FC = () => {
         const { name, value } = e.target;
         setFormData(prev => ({
             ...prev,
-            [name]: value
+            [name]: ['maxCompletionTokens', 'frequencyPenalty', 'presencePenalty', 'temperature', 'topP'].includes(name)
+                ? value === '' ? undefined : Number(value)
+                : value
         }));
     };
 
@@ -45,14 +54,14 @@ const EditPlan: React.FC = () => {
         setTimeout(() => setCopiedVar(null), 2000);
     };
 
-    const isOModel = formData.model.startsWith('O');
+    const isOModel = formData.model.startsWith('o');
     const systemVariables = formData.systemVariables.split(',').map(v => v.trim()).filter(Boolean);
     const userVariables = formData.userVariables.split(',').map(v => v.trim()).filter(Boolean);
 
     return (
         <div className={styles.container}>
             <div className={styles.header}>
-                <h1>Create New Plan</h1>
+                <h1>Edit Plan</h1>
                 <div className={styles.actionButtons}>
                     <button className={styles.saveButton} onClick={handleSave}>Save Changes</button>
                     <button className={styles.cancelButton} onClick={() => navigate('/')}>Back to Plans</button>
@@ -61,12 +70,12 @@ const EditPlan: React.FC = () => {
 
             <form className={styles.form}>
                 <div className={styles.formGroup}>
-                    <label htmlFor="name">Plan Name</label>
+                    <label htmlFor="planName">Plan Name</label>
                     <input
                         type="text"
-                        id="name"
-                        name="name"
-                        value={formData.name}
+                        id="planName"
+                        name="planName"
+                        value={formData.planName}
                         onChange={handleInputChange}
                         className={styles.input}
                         placeholder='e.g., Standard Plan'
@@ -187,18 +196,20 @@ const EditPlan: React.FC = () => {
 
                 {isOModel && (
                     <div className={styles.formGroup}>
-                        <label htmlFor="reasoningEffort">Reasoning Effort (0-1)</label>
-                        <input
-                            type="number"
+                        <label htmlFor="reasoningEffort">Reasoning Effort</label>
+                        <select
                             id="reasoningEffort"
                             name="reasoningEffort"
                             value={formData.reasoningEffort || ''}
                             onChange={handleInputChange}
-                            className={styles.input}
-                            min="0"
-                            max="1"
-                            step="0.1"
-                        />
+                            className={styles.select}
+                        >
+                            {REASONING_EFFORT_OPTIONS.map(option => (
+                                <option key={option} value={option}>
+                                    {option.charAt(0).toUpperCase() + option.slice(1)}
+                                </option>
+                            ))}
+                        </select>
                     </div>
                 )}
 

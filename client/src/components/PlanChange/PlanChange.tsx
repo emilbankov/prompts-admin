@@ -49,7 +49,7 @@ const PlanChange: React.FC = () => {
               onClick={() => handlePlanClick(plan.id)}
               className={styles.clickableRow}
             >
-              <td>{plan.name}</td>
+              <td>{plan.planName}</td>
             </tr>
           ))}
         </tbody>

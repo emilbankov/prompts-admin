@@ -2,41 +2,61 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import styles from './CreatePlan.module.css';
 import type { Plan } from '../../services/plansService';
+import { createPlan } from '../../services/plansService';
 
 const AI_MODELS = [
-    'O3',
-    'O3 Mini',
-    'O4 Mini',
-    'GPT-4.1',
-    'GPT-4.1 Mini',
-    'GPT-4.1 Nano'
+    'gpt-4.1',
+    'gpt-4.1-mini',
+    'gpt-4.1-nano',
+    'o3',
+    'o3-mini',
+    'o4-mini'
+];
+
+const REASONING_EFFORT_OPTIONS = [
+    'low',
+    'medium',
+    'high'
 ];
 
 const CreatePlan: React.FC = () => {
     const navigate = useNavigate();
     const [formData, setFormData] = useState<Plan>({
         id: undefined as unknown as number,
-        name: '',
+        planName: '',
         systemPrompt: '',
         systemVariables: '',
         userPrompt: '',
         userVariables: '',
-        model: 'O3'
+        model: 'gpt-4.1',
+        reasoningEffort: 'low'
     });
     const [copiedVar, setCopiedVar] = useState<string | null>(null);
+    const [isSubmitting, setIsSubmitting] = useState(false);
 
     const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
         const { name, value } = e.target;
         setFormData(prev => ({
             ...prev,
-            [name]: value
+            [name]: ['maxCompletionTokens', 'frequencyPenalty', 'presencePenalty', 'temperature', 'topP'].includes(name)
+                ? value === '' ? undefined : Number(value)
+                : value
         }));
     };
 
     const handleSave = async () => {
-        // TODO: Implement API call to save plan
-        console.log('Saving plan:', formData);
-        navigate('/');
+        try {
+            setIsSubmitting(true);
+            const { id, ...planData } = formData;
+            console.log('Sending plan data to backend:', planData);
+            await createPlan(planData);
+            navigate('/');
+        } catch (error) {
+            console.error('Error creating plan:', error);
+            // TODO: Show error message to user
+        } finally {
+            setIsSubmitting(false);
+        }
     };
 
     const handleCopyVariable = (variable: string) => {
@@ -45,7 +65,7 @@ const CreatePlan: React.FC = () => {
         setTimeout(() => setCopiedVar(null), 2000);
     };
 
-    const isOModel = formData.model.startsWith('O');
+    const isOModel = formData.model.startsWith('o');
     const systemVariables = formData.systemVariables.split(',').map(v => v.trim()).filter(Boolean);
     const userVariables = formData.userVariables.split(',').map(v => v.trim()).filter(Boolean);
 
@@ -54,19 +74,31 @@ const CreatePlan: React.FC = () => {
             <div className={styles.header}>
                 <h1>Create New Plan</h1>
                 <div className={styles.actionButtons}>
-                    <button className={styles.saveButton} onClick={handleSave}>Create</button>
-                    <button className={styles.cancelButton} onClick={() => navigate('/')}>Back to Plans</button>
+                    <button 
+                        className={styles.saveButton} 
+                        onClick={handleSave}
+                        disabled={isSubmitting}
+                    >
+                        {isSubmitting ? 'Creating...' : 'Create'}
+                    </button>
+                    <button 
+                        className={styles.cancelButton} 
+                        onClick={() => navigate('/')}
+                        disabled={isSubmitting}
+                    >
+                        Back to Plans
+                    </button>
                 </div>
             </div>
 
             <form className={styles.form}>
                 <div className={styles.formGroup}>
-                    <label htmlFor="name">Plan Name</label>
+                    <label htmlFor="planName">Plan Name</label>
                     <input
                         type="text"
-                        id="name"
-                        name="name"
-                        value={formData.name}
+                        id="planName"
+                        name="planName"
+                        value={formData.planName}
                         onChange={handleInputChange}
                         className={styles.input}
                         placeholder='e.g., Standard Plan'
@@ -187,18 +219,20 @@ const CreatePlan: React.FC = () => {
 
                 {isOModel && (
                     <div className={styles.formGroup}>
-                        <label htmlFor="reasoningEffort">Reasoning Effort (0-1)</label>
-                        <input
-                            type="number"
+                        <label htmlFor="reasoningEffort">Reasoning Effort</label>
+                        <select
                             id="reasoningEffort"
                             name="reasoningEffort"
                             value={formData.reasoningEffort || ''}
                             onChange={handleInputChange}
-                            className={styles.input}
-                            min="0"
-                            max="1"
-                            step="0.1"
-                        />
+                            className={styles.select}
+                        >
+                            {REASONING_EFFORT_OPTIONS.map(option => (
+                                <option key={option} value={option}>
+                                    {option.charAt(0).toUpperCase() + option.slice(1)}
+                                </option>
+                            ))}
+                        </select>
                     </div>
                 )}
 
