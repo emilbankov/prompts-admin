@@ -1,6 +1,7 @@
 import { Routes, Route } from 'react-router-dom';
 import PlanChange from './components/PlanChange/PlanChange';
-import PlanDetails from './components/PlanDetails/PlanDetails';
+import CreatePlan from './components/CreatePlan/CreatePlan';
+import EditPlan from './components/EditPlan/EditPlan';
 import './App.css';
 
 function App() {
@@ -8,7 +9,8 @@ function App() {
         <div className="app">
             <Routes>
                 <Route path='/' element={<PlanChange />} />
-                <Route path='/plan/:planId' element={<PlanDetails />} />
+                <Route path='/plan/new' element={<CreatePlan />} />
+                <Route path='/plan/:planId' element={<EditPlan />} />
             </Routes>
         </div>
     );
