@@ -1,22 +1,7 @@
-import React, { useState, useEffect } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
-import styles from './PlanDetails.module.css';
-
-interface Plan {
-    id: string;
-    name: string;
-    systemPrompt: string;
-    systemVariables: string;
-    userPrompt: string;
-    userVariables: string;
-    model: string;
-    maxCompletionTokens?: number;
-    reasoningEffort?: number;
-    frequencyPenalty?: number;
-    presencePenalty?: number;
-    temperature?: number;
-    topP?: number;
-}
+import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
+import styles from './CreatePlan.module.css';
+import type { Plan } from '../../services/plansService';
 
 const AI_MODELS = [
     'O3',
@@ -27,12 +12,10 @@ const AI_MODELS = [
     'GPT-4.1 Nano'
 ];
 
-const PlanDetails: React.FC = () => {
-    const { planId } = useParams();
+const CreatePlan: React.FC = () => {
     const navigate = useNavigate();
-    const [plan, setPlan] = useState<Plan | null>(null);
     const [formData, setFormData] = useState<Plan>({
-        id: '',
+        id: undefined as unknown as number,
         name: '',
         systemPrompt: '',
         systemVariables: '',
@@ -41,27 +24,6 @@ const PlanDetails: React.FC = () => {
         model: 'O3'
     });
     const [copiedVar, setCopiedVar] = useState<string | null>(null);
-
-    useEffect(() => {
-        // Mock function to fetch plan - replace with actual API call
-        const fetchPlan = async () => {
-            if (!planId) return;
-            
-            const mockPlan: Plan = {
-                id: planId,
-                name: '',
-                systemPrompt: '',
-                systemVariables: '',
-                userPrompt: '',
-                userVariables: '',
-                model: 'O3'
-            };
-            setPlan(mockPlan);
-            setFormData(mockPlan);
-        };
-
-        fetchPlan();
-    }, [planId]);
 
     const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
         const { name, value } = e.target;
@@ -72,11 +34,9 @@ const PlanDetails: React.FC = () => {
     };
 
     const handleSave = async () => {
-        if (plan) {
-            // Mock save function - replace with actual API call
-            console.log('Saving plan:', formData);
-            navigate('/');
-        }
+        // TODO: Implement API call to save plan
+        console.log('Saving plan:', formData);
+        navigate('/');
     };
 
     const handleCopyVariable = (variable: string) => {
@@ -89,12 +49,12 @@ const PlanDetails: React.FC = () => {
     const systemVariables = formData.systemVariables.split(',').map(v => v.trim()).filter(Boolean);
     const userVariables = formData.userVariables.split(',').map(v => v.trim()).filter(Boolean);
 
-    return plan ? (
+    return (
         <div className={styles.container}>
             <div className={styles.header}>
-                <h1>Edit Plan</h1>
+                <h1>Create New Plan</h1>
                 <div className={styles.actionButtons}>
-                    <button className={styles.saveButton} onClick={handleSave}>Save Changes</button>
+                    <button className={styles.saveButton} onClick={handleSave}>Create</button>
                     <button className={styles.cancelButton} onClick={() => navigate('/')}>Back to Plans</button>
                 </div>
             </div>
@@ -307,7 +267,7 @@ const PlanDetails: React.FC = () => {
                 )}
             </form>
         </div>
-    ) : null;
+    );
 };
 
-export default PlanDetails; 
+export default CreatePlan; 
