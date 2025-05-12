@@ -9,11 +9,35 @@
   color: #e0e0e0;
 }
 
+.header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 2rem;
+}
+
 .title {
   color: #ffffff;
-  margin-bottom: 2rem;
-  text-align: center;
+  margin: 0;
   font-size: 2rem;
+}
+
+.newButton {
+  background-color: #2ea043;
+  color: white;
+  padding: 0.5rem 1rem;
+  border-radius: 6px;
+  font-weight: 500;
+  cursor: pointer;
+  border: none;
+  transition: background-color 0.2s ease;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.newButton:hover {
+  background-color: #2c974b;
 }
 
 .content {
@@ -71,43 +95,25 @@
   flex-direction: column;
 }
 
-.header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 1.5rem;
-}
-
-.header h2 {
-  margin: 0;
-  color: #333;
-  font-size: 1.75rem;
-}
-
 .plansTable {
   width: 100%;
   border-collapse: collapse;
   background-color: #2d2d2d;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
-  border-radius: 8px;
+  border-radius: 6px;
   overflow: hidden;
 }
 
-.plansTable th,
+.plansTable th {
+  text-align: left;
+  padding: 1rem;
+  background-color: #404040;
+  color: #ffffff;
+  font-weight: 500;
+}
+
 .plansTable td {
   padding: 1rem;
-  text-align: left;
-  border-bottom: 1px solid #404040;
-}
-
-.plansTable th {
-  background-color: #363636;
-  font-weight: 600;
-  color: #ffffff;
-}
-
-.plansTable tr:last-child td {
-  border-bottom: none;
+  border-top: 1px solid #404040;
 }
 
 .clickableRow {
