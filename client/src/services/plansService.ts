@@ -1,6 +1,6 @@
 import axios from 'axios';
 
-const BASE_URL = 'http://localhost:8080/prompts';
+const BASE_URL = 'https://religious-josy-boklucite-a0b493a9.koyeb.app/prompts';
 
 export interface Plan {
     id: number;
@@ -18,11 +18,35 @@ export interface Plan {
     topP?: number;
 }
 
-export type CreatePlanData = Omit<Plan, 'id'>;
+export interface PlanResponse {
+    message: string;
+    prompt: Plan;
+}
 
-export const getPlanById = async (id: number): Promise<Plan> => {
+export interface PlansResponse {
+    message: string;
+    prompts: Plan[];
+}
+
+export type CreatePlanData = Omit<Plan, 'id' | 'systemVariables' | 'userVariables'>;
+
+export const getPlans = async (): Promise<PlansResponse> => {
     try {
-        const { data } = await axios.get<Plan>(`${BASE_URL}/${id}`);
+        const { data } = await axios.get<PlansResponse>(BASE_URL);
+        return data;
+    } catch (error) {
+        if (axios.isAxiosError(error)) {
+            console.error('Error fetching plans:', error.response?.data || error.message);
+        } else {
+            console.error('Error fetching plans:', error);
+        }
+        throw error;
+    }
+};
+
+export const getPlanById = async (id: number): Promise<PlanResponse> => {
+    try {
+        const { data } = await axios.get<PlanResponse>(`${BASE_URL}/${id}`);
         return data;
     } catch (error) {
         if (axios.isAxiosError(error)) {
@@ -44,6 +68,29 @@ export const createPlan = async (planData: CreatePlanData): Promise<Plan> => {
         } else {
             console.error('Error creating plan:', error);
         }
+        throw error;
+    }
+};
+
+export const updatePlan = async (id: number, planData: CreatePlanData): Promise<Plan> => {
+    try {
+        const { data } = await axios.put<Plan>(`${BASE_URL}/${id}`, planData);
+        return data;
+    } catch (error) {
+        if (axios.isAxiosError(error)) {
+            console.error('Error updating plan:', error.response?.data || error.message);
+        } else {
+            console.error('Error updating plan:', error);
+        }
+        throw error;
+    }
+};
+
+export const deletePlan = async (planId: number): Promise<void> => {
+    try {
+        await axios.delete(`${BASE_URL}/${planId}`);
+    } catch (error) {
+        console.error('Error deleting plan:', error);
         throw error;
     }
 };
