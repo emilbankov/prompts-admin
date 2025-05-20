@@ -1,8 +1,10 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import styles from './CreatePlan.module.css';
 import type { Plan } from '../../services/plansService';
 import { createPlan } from '../../services/plansService';
+import axios from 'axios';
+import { getFieldValidationMessage } from '../../utils/validation';
 
 const AI_MODELS = [
     'gpt-4.1',
@@ -19,6 +21,17 @@ const REASONING_EFFORT_OPTIONS = [
     'high'
 ];
 
+const extractVariables = (text: string): string[] => {
+    const regex = /{([^}]+)}/g;
+    const matches = text.match(regex) || [];
+    const uniqueVariables = new Set(matches.map(match => match.slice(1, -1)));
+    return Array.from(uniqueVariables);
+};
+
+interface ValidationErrors {
+    [key: string]: string;
+}
+
 const CreatePlan: React.FC = () => {
     const navigate = useNavigate();
     const [formData, setFormData] = useState<Plan>({
@@ -28,46 +41,134 @@ const CreatePlan: React.FC = () => {
         systemVariables: '',
         userPrompt: '',
         userVariables: '',
-        model: 'gpt-4.1',
-        reasoningEffort: 'low'
+        model: '',
+        reasoningEffort: ''
     });
-    const [copiedVar, setCopiedVar] = useState<string | null>(null);
+    const [copiedVar, setCopiedVar] = useState<{ name: string; source: 'system' | 'user' } | null>(null);
     const [isSubmitting, setIsSubmitting] = useState(false);
+    const [systemVariables, setSystemVariables] = useState<string[]>([]);
+    const [userVariables, setUserVariables] = useState<string[]>([]);
+    const [validationErrors, setValidationErrors] = useState<ValidationErrors>({});
+
+    useEffect(() => {
+        setSystemVariables(extractVariables(formData.systemPrompt));
+        setUserVariables(extractVariables(formData.userPrompt));
+    }, [formData.systemPrompt, formData.userPrompt]);
 
     const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
         const { name, value } = e.target;
-        setFormData(prev => ({
-            ...prev,
-            [name]: ['maxCompletionTokens', 'frequencyPenalty', 'presencePenalty', 'temperature', 'topP'].includes(name)
-                ? value === '' ? undefined : Number(value)
-                : value
-        }));
+        
+        // Handle numeric inputs
+        if (['maxCompletionTokens', 'frequencyPenalty', 'presencePenalty', 'temperature', 'topP'].includes(name)) {
+            const numValue = value === '' ? undefined : Number(value);
+            setFormData(prev => ({ ...prev, [name]: numValue }));
+        } else {
+            setFormData(prev => ({ ...prev, [name]: value }));
+        }
+    };
+
+    const validateForm = () => {
+        const errors: ValidationErrors = {};
+        
+        if (!formData.planName.trim()) {
+            errors.planName = 'Plan name is required';
+        }
+        if (!formData.systemPrompt.trim()) {
+            errors.systemPrompt = 'System prompt is required';
+        }
+        if (!formData.userPrompt.trim()) {
+            errors.userPrompt = 'User prompt is required';
+        }
+        if (!formData.model) {
+            errors.model = 'AI model is required';
+        }
+        
+        // Required numeric fields
+        if (formData.maxCompletionTokens === undefined) {
+            errors.maxCompletionTokens = 'Max completion tokens is required';
+        } else {
+            const errorMessage = getFieldValidationMessage('maxCompletionTokens', formData.maxCompletionTokens);
+            if (errorMessage) errors.maxCompletionTokens = errorMessage;
+        }
+        
+        // Model-specific required fields
+        if (isOModel) {
+            if (!formData.reasoningEffort) {
+                errors.reasoningEffort = 'Reasoning effort is required for O models';
+            }
+        } else {
+            if (formData.frequencyPenalty === undefined) {
+                errors.frequencyPenalty = 'Frequency penalty is required';
+            } else {
+                const errorMessage = getFieldValidationMessage('frequencyPenalty', formData.frequencyPenalty);
+                if (errorMessage) errors.frequencyPenalty = errorMessage;
+            }
+            
+            if (formData.presencePenalty === undefined) {
+                errors.presencePenalty = 'Presence penalty is required';
+            } else {
+                const errorMessage = getFieldValidationMessage('presencePenalty', formData.presencePenalty);
+                if (errorMessage) errors.presencePenalty = errorMessage;
+            }
+            
+            if (formData.temperature === undefined) {
+                errors.temperature = 'Temperature is required';
+            } else {
+                const errorMessage = getFieldValidationMessage('temperature', formData.temperature);
+                if (errorMessage) errors.temperature = errorMessage;
+            }
+            
+            if (formData.topP === undefined) {
+                errors.topP = 'Top P is required';
+            } else {
+                const errorMessage = getFieldValidationMessage('topP', formData.topP);
+                if (errorMessage) errors.topP = errorMessage;
+            }
+        }
+
+        setValidationErrors(errors);
+        return Object.keys(errors).length === 0;
     };
 
     const handleSave = async () => {
+        // Validate form on save
+        if (!validateForm()) {
+            return;
+        }
+
         try {
             setIsSubmitting(true);
-            const { id, ...planData } = formData;
-            console.log('Sending plan data to backend:', planData);
-            await createPlan(planData);
+            const { id, systemVariables, userVariables, ...planData } = formData;
+            
+            const formattedData = {
+                ...planData,
+                maxCompletionTokens: planData.maxCompletionTokens || undefined,
+                frequencyPenalty: planData.frequencyPenalty || undefined,
+                presencePenalty: planData.presencePenalty || undefined,
+                temperature: planData.temperature || undefined,
+                topP: planData.topP || undefined,
+                reasoningEffort: planData.reasoningEffort || undefined
+            };
+
+            await createPlan(formattedData);
             navigate('/');
         } catch (error) {
             console.error('Error creating plan:', error);
-            // TODO: Show error message to user
+            if (axios.isAxiosError(error)) {
+                console.error('Error details:', error.response?.data);
+            }
         } finally {
             setIsSubmitting(false);
         }
     };
 
-    const handleCopyVariable = (variable: string) => {
+    const handleCopyVariable = (variable: string, source: 'system' | 'user') => {
         navigator.clipboard.writeText(`{${variable}}`);
-        setCopiedVar(variable);
+        setCopiedVar({ name: variable, source });
         setTimeout(() => setCopiedVar(null), 2000);
     };
 
     const isOModel = formData.model.startsWith('o');
-    const systemVariables = formData.systemVariables.split(',').map(v => v.trim()).filter(Boolean);
-    const userVariables = formData.userVariables.split(',').map(v => v.trim()).filter(Boolean);
 
     return (
         <div className={styles.container}>
@@ -102,7 +203,11 @@ const CreatePlan: React.FC = () => {
                         onChange={handleInputChange}
                         className={styles.input}
                         placeholder='e.g., Standard Plan'
+                        required
                     />
+                    {validationErrors.planName && (
+                        <span className={styles.error}>{validationErrors.planName}</span>
+                    )}
                 </div>
 
                 <div className={styles.formGroup}>
@@ -114,68 +219,32 @@ const CreatePlan: React.FC = () => {
                         onChange={handleInputChange}
                         className={styles.textarea}
                         rows={4}
+                        placeholder="Enter system prompt with variables in curly braces, e.g., {role}, {expertise}"
+                        required
                     />
+                    {validationErrors.systemPrompt && (
+                        <span className={styles.error}>{validationErrors.systemPrompt}</span>
+                    )}
                 </div>
 
-                <div className={styles.formGroup}>
-                    <label htmlFor="systemVariables">System Prompt Variables (comma-separated)</label>
-                    <input
-                        type="text"
-                        id="systemVariables"
-                        name="systemVariables"
-                        value={formData.systemVariables}
-                        onChange={handleInputChange}
-                        className={styles.input}
-                        placeholder="e.g., role, expertise"
-                    />
-                </div>
-
-                <div className={styles.variablesContainer}>
-                    <h3>System Prompt Variables</h3>
-                    <div className={styles.variablesList}>
-                        {systemVariables.map(variable => (
-                            <button
-                                key={variable}
-                                type="button"
-                                onClick={() => handleCopyVariable(variable)}
-                                className={`${styles.variableButton} ${copiedVar === variable ? styles.copied : ''}`}
-                            >
-                                {variable}
-                                {copiedVar === variable && <span className={styles.copyIndicator}>✓</span>}
-                            </button>
-                        ))}
+                {systemVariables.length > 0 && (
+                    <div className={styles.variablesContainer}>
+                        <h3>System Prompt Variables</h3>
+                        <div className={styles.variablesList}>
+                            {systemVariables.map(variable => (
+                                <button
+                                    key={variable}
+                                    type="button"
+                                    onClick={() => handleCopyVariable(variable, 'system')}
+                                    className={`${styles.variableButton} ${copiedVar?.name === variable && copiedVar?.source === 'system' ? styles.copied : ''}`}
+                                >
+                                    {variable}
+                                    {copiedVar?.name === variable && copiedVar?.source === 'system' && <span className={styles.copyIndicator}>✓</span>}
+                                </button>
+                            ))}
+                        </div>
                     </div>
-                </div>
-
-                <div className={styles.formGroup}>
-                    <label htmlFor="userVariables">User Prompt Variables (comma-separated)</label>
-                    <input
-                        type="text"
-                        id="userVariables"
-                        name="userVariables"
-                        value={formData.userVariables}
-                        onChange={handleInputChange}
-                        className={styles.input}
-                        placeholder="e.g., location, duration, preferences"
-                    />
-                </div>
-
-                <div className={styles.variablesContainer}>
-                    <h3>User Prompt Variables</h3>
-                    <div className={styles.variablesList}>
-                        {userVariables.map(variable => (
-                            <button
-                                key={variable}
-                                type="button"
-                                onClick={() => handleCopyVariable(variable)}
-                                className={`${styles.variableButton} ${copiedVar === variable ? styles.copied : ''}`}
-                            >
-                                {variable}
-                                {copiedVar === variable && <span className={styles.copyIndicator}>✓</span>}
-                            </button>
-                        ))}
-                    </div>
-                </div>
+                )}
 
                 <div className={styles.formGroup}>
                     <label htmlFor="userPrompt">User Prompt</label>
@@ -186,8 +255,32 @@ const CreatePlan: React.FC = () => {
                         onChange={handleInputChange}
                         className={styles.textarea}
                         rows={4}
+                        placeholder="Enter user prompt with variables in curly braces, e.g., {location}, {duration}"
+                        required
                     />
+                    {validationErrors.userPrompt && (
+                        <span className={styles.error}>{validationErrors.userPrompt}</span>
+                    )}
                 </div>
+
+                {userVariables.length > 0 && (
+                    <div className={styles.variablesContainer}>
+                        <h3>User Prompt Variables</h3>
+                        <div className={styles.variablesList}>
+                            {userVariables.map(variable => (
+                                <button
+                                    key={variable}
+                                    type="button"
+                                    onClick={() => handleCopyVariable(variable, 'user')}
+                                    className={`${styles.variableButton} ${copiedVar?.name === variable && copiedVar?.source === 'user' ? styles.copied : ''}`}
+                                >
+                                    {variable}
+                                    {copiedVar?.name === variable && copiedVar?.source === 'user' && <span className={styles.copyIndicator}>✓</span>}
+                                </button>
+                            ))}
+                        </div>
+                    </div>
+                )}
 
                 <div className={styles.formGroup}>
                     <label htmlFor="model">AI Model</label>
@@ -197,11 +290,16 @@ const CreatePlan: React.FC = () => {
                         value={formData.model}
                         onChange={handleInputChange}
                         className={styles.select}
+                        required
                     >
+                        <option value="" disabled>Select a model</option>
                         {AI_MODELS.map(model => (
                             <option key={model} value={model}>{model}</option>
                         ))}
                     </select>
+                    {validationErrors.model && (
+                        <span className={styles.error}>{validationErrors.model}</span>
+                    )}
                 </div>
 
                 <div className={styles.formGroup}>
@@ -213,8 +311,11 @@ const CreatePlan: React.FC = () => {
                         value={formData.maxCompletionTokens || ''}
                         onChange={handleInputChange}
                         className={styles.input}
-                        min="1"
+                        min="0"
                     />
+                    {validationErrors.maxCompletionTokens && (
+                        <span className={styles.error}>{validationErrors.maxCompletionTokens}</span>
+                    )}
                 </div>
 
                 {isOModel && (
@@ -226,13 +327,18 @@ const CreatePlan: React.FC = () => {
                             value={formData.reasoningEffort || ''}
                             onChange={handleInputChange}
                             className={styles.select}
+                            required
                         >
+                            <option value="" disabled>Select reasoning effort</option>
                             {REASONING_EFFORT_OPTIONS.map(option => (
                                 <option key={option} value={option}>
                                     {option.charAt(0).toUpperCase() + option.slice(1)}
                                 </option>
                             ))}
                         </select>
+                        {validationErrors.reasoningEffort && (
+                            <span className={styles.error}>{validationErrors.reasoningEffort}</span>
+                        )}
                     </div>
                 )}
 
@@ -251,6 +357,9 @@ const CreatePlan: React.FC = () => {
                                 max="2"
                                 step="0.1"
                             />
+                            {validationErrors.frequencyPenalty && (
+                                <span className={styles.error}>{validationErrors.frequencyPenalty}</span>
+                            )}
                         </div>
 
                         <div className={styles.formGroup}>
@@ -266,6 +375,9 @@ const CreatePlan: React.FC = () => {
                                 max="2"
                                 step="0.1"
                             />
+                            {validationErrors.presencePenalty && (
+                                <span className={styles.error}>{validationErrors.presencePenalty}</span>
+                            )}
                         </div>
 
                         <div className={styles.formGroup}>
@@ -281,6 +393,9 @@ const CreatePlan: React.FC = () => {
                                 max="2"
                                 step="0.1"
                             />
+                            {validationErrors.temperature && (
+                                <span className={styles.error}>{validationErrors.temperature}</span>
+                            )}
                         </div>
 
                         <div className={styles.formGroup}>
@@ -296,6 +411,9 @@ const CreatePlan: React.FC = () => {
                                 max="1"
                                 step="0.1"
                             />
+                            {validationErrors.topP && (
+                                <span className={styles.error}>{validationErrors.topP}</span>
+                            )}
                         </div>
                     </>
                 )}
