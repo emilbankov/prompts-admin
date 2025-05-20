@@ -108,6 +108,9 @@
 
 .plansTable td {
   padding: 1rem;
+}
+
+.plansTable tr:not(:first-child) {
   border-top: 1px solid #404040;
 }
 
@@ -120,9 +123,29 @@
   background-color: #404040;
 }
 
-.deleteCell {
-  width: 50px;
-  text-align: center;
+.actionCell {
+  display: flex;
+  gap: 0.5rem;
+  padding-right: 5px;
+  justify-content: flex-end;
+  align-items: center;
+}
+
+.testButton {
+  background: none;
+  border: none;
+  color: #0d6efd;
+  cursor: pointer;
+  padding: 6px;
+  border-radius: 4px;
+  transition: background-color 0.2s;
+  font-size: 1.2rem;
+  display: inline-flex;
+  align-items: center;
+}
+
+.testButton:hover {
+  background-color: #404040;
 }
 
 .deleteButton {
@@ -130,10 +153,12 @@
   border: none;
   color: #dc3545;
   cursor: pointer;
-  padding: 4px 8px;
+  padding: 6px;
   border-radius: 4px;
   transition: background-color 0.2s;
   font-size: 1.2rem;
+  display: inline-flex;
+  align-items: center;
 }
 
 .deleteButton:hover {
@@ -357,4 +382,9 @@
   justify-content: center;
   align-items: center;
   min-height: 200px;
+}
+
+.buttonsPlan {
+  display: flex;
+  gap: 1rem;
 }

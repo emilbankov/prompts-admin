@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { FaTrash } from 'react-icons/fa';
+import { FaTrash, FaPlay } from 'react-icons/fa';
 import styles from './PlanChange.module.css';
 import type { Plan } from '../../services/plansService';
 import { getPlans, deletePlan } from '../../services/plansService';
@@ -22,14 +22,14 @@ const DeleteModal: React.FC<DeleteModalProps> = ({ isOpen, onClose, onConfirm, p
                 <p>Are you sure you want to delete "{planName}"?</p>
                 <p className={styles.warningText}>This action cannot be undone.</p>
                 <div className={styles.modalButtons}>
-                    <button 
-                        className={styles.cancelButton} 
+                    <button
+                        className={styles.cancelButton}
                         onClick={onClose}
                     >
                         Cancel
                     </button>
-                    <button 
-                        className={styles.deleteConfirmButton} 
+                    <button
+                        className={styles.deleteConfirmButton}
                         onClick={onConfirm}
                     >
                         Delete
@@ -46,6 +46,7 @@ const PlanChange: React.FC = () => {
     const [isLoading, setIsLoading] = useState(true);
     const [hoveredRow, setHoveredRow] = useState<number | null>(null);
     const [hoveredDelete, setHoveredDelete] = useState<number | null>(null);
+    const [hoveredTest, setHoveredTest] = useState<number | null>(null);
     const [deleteModal, setDeleteModal] = useState<{
         isOpen: boolean;
         planId: number | null;
@@ -79,6 +80,11 @@ const PlanChange: React.FC = () => {
 
     const handleNewPlan = () => {
         navigate('/plan/new');
+    };
+
+    const handleTestPlan = (e: React.MouseEvent, planId: number) => {
+        e.stopPropagation(); // Prevent row click event
+        navigate(`/test/${planId}`);
     };
 
     const handleDelete = (e: React.MouseEvent, planId: number, planName: string) => {
@@ -150,13 +156,28 @@ const PlanChange: React.FC = () => {
                                 onClick={() => handlePlanClick(plan.id)}
                                 className={styles.clickableRow}
                                 onMouseEnter={() => setHoveredRow(plan.id)}
-                                onMouseLeave={() => setHoveredRow(null)}
+                                onMouseLeave={() => {
+                                    setHoveredRow(null);
+                                    setHoveredDelete(null);
+                                    setHoveredTest(null);
+                                }}
                                 style={{
-                                    backgroundColor: hoveredRow === plan.id && hoveredDelete !== plan.id ? '#404040' : 'transparent'
+                                    backgroundColor: hoveredRow === plan.id && hoveredDelete !== plan.id && hoveredTest !== plan.id ? '#404040' : 'transparent'
                                 }}
                             >
                                 <td>{plan.planName}</td>
-                                <td className={styles.deleteCell}>
+                                <td className={styles.actionCell}>
+                                    <button
+                                        className={styles.testButton}
+                                        onClick={(e) => handleTestPlan(e, plan.id)}
+                                        onMouseEnter={() => setHoveredTest(plan.id)}
+                                        onMouseLeave={() => setHoveredTest(null)}
+                                        style={{
+                                            backgroundColor: hoveredTest === plan.id ? '#404040' : 'transparent'
+                                        }}
+                                    >
+                                        <FaPlay />
+                                    </button>
                                     <button
                                         className={styles.deleteButton}
                                         onClick={(e) => handleDelete(e, plan.id, plan.planName)}
