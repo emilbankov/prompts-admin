@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { FaTrash, FaPlay } from 'react-icons/fa';
+import { FaTrash, FaPlay, FaEye } from 'react-icons/fa';
 import styles from './PlanChange.module.css';
 import type { Plan } from '../../services/plansService';
 import { getPlans, deletePlan } from '../../services/plansService';
@@ -47,6 +47,7 @@ const PlanChange: React.FC = () => {
     const [hoveredRow, setHoveredRow] = useState<number | null>(null);
     const [hoveredDelete, setHoveredDelete] = useState<number | null>(null);
     const [hoveredTest, setHoveredTest] = useState<number | null>(null);
+    const [hoveredPreview, setHoveredPreview] = useState<number | null>(null);
     const [deleteModal, setDeleteModal] = useState<{
         isOpen: boolean;
         planId: number | null;
@@ -85,6 +86,11 @@ const PlanChange: React.FC = () => {
     const handleTestPlan = (e: React.MouseEvent, planId: number) => {
         e.stopPropagation(); // Prevent row click event
         navigate(`/test/${planId}`);
+    };
+
+    const handlePreviewPlan = (e: React.MouseEvent, planId: number) => {
+        e.stopPropagation(); // Prevent row click event
+        navigate(`/preview/${planId}`);
     };
 
     const handleDelete = (e: React.MouseEvent, planId: number, planName: string) => {
@@ -160,13 +166,29 @@ const PlanChange: React.FC = () => {
                                     setHoveredRow(null);
                                     setHoveredDelete(null);
                                     setHoveredTest(null);
+                                    setHoveredPreview(null);
                                 }}
                                 style={{
-                                    backgroundColor: hoveredRow === plan.id && hoveredDelete !== plan.id && hoveredTest !== plan.id ? '#404040' : 'transparent'
+                                    backgroundColor: hoveredRow === plan.id && 
+                                        hoveredDelete !== plan.id && 
+                                        hoveredTest !== plan.id && 
+                                        hoveredPreview !== plan.id ? '#404040' : 'transparent'
                                 }}
                             >
                                 <td>{plan.planName}</td>
                                 <td className={styles.actionCell}>
+                                    <button
+                                        className={styles.previewButton}
+                                        onClick={(e) => handlePreviewPlan(e, plan.id)}
+                                        onMouseEnter={() => setHoveredPreview(plan.id)}
+                                        onMouseLeave={() => setHoveredPreview(null)}
+                                        style={{
+                                            backgroundColor: hoveredPreview === plan.id ? '#404040' : 'transparent'
+                                        }}
+                                        title="Preview Plan"
+                                    >
+                                        <FaEye />
+                                    </button>
                                     <button
                                         className={styles.testButton}
                                         onClick={(e) => handleTestPlan(e, plan.id)}
